@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/Resources">
+        <file>Images/Classes_Background.png</file>
+    </qresource>
+</RCC>
