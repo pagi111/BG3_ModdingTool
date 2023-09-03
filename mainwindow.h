@@ -22,6 +22,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    bool eventFilter(QObject *obj, QEvent *event);
+    void TableDeleteRow(QTableWidget* tw, int rowIndex);
+
 private slots:
     void on_AddClassFile_Btn_clicked();
 
@@ -46,11 +49,12 @@ private slots:
 
     void on_tableWidget_Boosts_customContextMenuRequested(const QPoint &pos);
 
+    void on_AddValueListsFile_Btn_clicked();
+
 private:
     Ui::MainWindow *ui;
     void ConnectWidgetsInFrameClassDescription();
     void ConnectWidgetsInFrameLevelProgression();
-    //void DeleteRow(QTableWidget* tw, int rowIndex);
 
 };
 #endif // MAINWINDOW_H

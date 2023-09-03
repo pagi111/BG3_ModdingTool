@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1339</width>
+    <width>1535</width>
     <height>818</height>
    </rect>
   </property>
@@ -20,7 +20,7 @@
    <widget class="QTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
-      <x>670</x>
+      <x>920</x>
       <y>570</y>
       <width>511</width>
       <height>171</height>
@@ -257,7 +257,7 @@
    <widget class="QFrame" name="frame_ClassDescription">
     <property name="geometry">
      <rect>
-      <x>660</x>
+      <x>850</x>
       <y>10</y>
       <width>641</width>
       <height>551</height>
@@ -1362,9 +1362,9 @@ color: rgb(255, 255, 255);</string>
    <widget class="QFrame" name="frame_LevelProgression">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>250</y>
-      <width>641</width>
+      <x>10</x>
+      <y>230</y>
+      <width>831</width>
       <height>421</height>
      </rect>
     </property>
@@ -1920,10 +1920,10 @@ color: rgb(255, 255, 255);</string>
     <widget class="QTableWidget" name="tableWidget_Boosts">
      <property name="geometry">
       <rect>
-       <x>180</x>
-       <y>130</y>
-       <width>411</width>
-       <height>181</height>
+       <x>490</x>
+       <y>170</y>
+       <width>281</width>
+       <height>161</height>
       </rect>
      </property>
      <property name="sizePolicy">
@@ -1942,72 +1942,40 @@ color: rgb(255, 255, 255);</string>
       <enum>Qt::ScrollBarAlwaysOff</enum>
      </property>
      <property name="dragDropMode">
-      <enum>QAbstractItemView::DragDrop</enum>
+      <enum>QAbstractItemView::NoDragDrop</enum>
      </property>
      <property name="selectionMode">
-      <enum>QAbstractItemView::SingleSelection</enum>
+      <enum>QAbstractItemView::ExtendedSelection</enum>
      </property>
      <property name="rowCount">
-      <number>6</number>
+      <number>1</number>
      </property>
      <property name="columnCount">
-      <number>5</number>
+      <number>0</number>
      </property>
      <attribute name="horizontalHeaderVisible">
       <bool>false</bool>
      </attribute>
+     <attribute name="horizontalHeaderDefaultSectionSize">
+      <number>200</number>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
-     </attribute>
-     <attribute name="verticalHeaderHighlightSections">
-      <bool>true</bool>
      </attribute>
      <row>
       <property name="text">
        <string>New Row</string>
       </property>
      </row>
-     <row/>
-     <row/>
-     <row/>
-     <row/>
-     <row/>
-     <column>
-      <property name="text">
-       <string>New Column</string>
-      </property>
-     </column>
-     <column/>
-     <column/>
-     <column/>
-     <column/>
-     <item row="0" column="0">
-      <property name="text">
-       <string/>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
-     <item row="0" column="1">
-      <property name="text">
-       <string>asd</string>
-      </property>
-     </item>
-     <item row="1" column="0">
-      <property name="text">
-       <string/>
-      </property>
-      <property name="checkState">
-       <enum>Unchecked</enum>
-      </property>
-     </item>
     </widget>
     <widget class="QPushButton" name="btn_Boosts_AddRow">
      <property name="geometry">
       <rect>
-       <x>560</x>
-       <y>280</y>
+       <x>740</x>
+       <y>300</y>
        <width>31</width>
        <height>31</height>
       </rect>
@@ -2022,13 +1990,35 @@ color: rgb(255, 255, 255);</string>
      </property>
     </widget>
    </widget>
+   <widget class="QPushButton" name="AddValueListsFile_Btn">
+    <property name="geometry">
+     <rect>
+      <x>420</x>
+      <y>10</y>
+      <width>151</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Add ValueLists File</string>
+    </property>
+   </widget>
+   <zorder>textEdit</zorder>
+   <zorder>AddClassFile_Btn</zorder>
+   <zorder>listLevels</zorder>
+   <zorder>listClasses</zorder>
+   <zorder>AddProgressionFile_Btn</zorder>
+   <zorder>SaveAllToFiles_Btn</zorder>
+   <zorder>frame_LevelProgression</zorder>
+   <zorder>frame_ClassDescription</zorder>
+   <zorder>AddValueListsFile_Btn</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1339</width>
+     <width>1535</width>
      <height>22</height>
     </rect>
    </property>

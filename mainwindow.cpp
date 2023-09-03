@@ -6,8 +6,6 @@
 #include "globalVars.h"
 
 
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -19,6 +17,11 @@ MainWindow::MainWindow(QWidget *parent)
     //ui->tableWidget->setIndexWidget(ui->tableWidget->model()->index(3, 1), new QPushButton("Button"));
     //ui->tableWidget->setItem(3, 2, new QTableWidgetItem("Item"));
 
+    ui->tableWidget_Boosts->hide();
+    ui->btn_Boosts_AddRow->hide();
+
+    ui->lineEdit_Boosts->installEventFilter(this);
+    ui->frame_LevelProgression->installEventFilter(this);
 
     QTableWidget* tableWidget = new MyTableClass();
     tableWidget->setRowCount(50);
@@ -28,6 +31,38 @@ MainWindow::MainWindow(QWidget *parent)
     //this->layout()->addWidget(tableWidget);
 
 }
+
+//Taken from: https://stackoverflow.com/questions/9261175/how-to-emit-a-signal-from-a-qpushbutton-when-the-mouse-hovers-over-it
+//In mainwindow.h: bool eventFilter(QObject *obj, QEvent *event);
+//To add objects: add ui->My_Object->installEventFilter(this); in MainWindow::MainWindow
+//Allows for adding new signals and function calls for QObjects
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    // This function repeatedly call for those QObjects
+    // which have installed eventFilter (Step 2)
+
+    if (obj == (QObject*)ui->lineEdit_Boosts) {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            PrintValuesToTableWidget(ui->tableWidget_Boosts, ui->lineEdit_Boosts->text());
+            ui->tableWidget_Boosts->show();
+            ui->btn_Boosts_AddRow->show();
+        }
+    }
+    if (obj == (QObject*)ui->frame_LevelProgression) {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            ui->tableWidget_Boosts->hide();
+            ui->btn_Boosts_AddRow->hide();
+        }
+    }
+    return QWidget::eventFilter(obj, event);
+//    else {
+//        // pass the event on to the parent class
+//        return QWidget::eventFilter(obj, event);
+//    }
+}
+
 
 //How to connect object to slots:
 //https://forum.qt.io/topic/123639/how-connect-customwiget-signals-and-slots/4
@@ -68,6 +103,26 @@ MainWindow::~MainWindow()
 }
 
 
+void MainWindow::on_AddValueListsFile_Btn_clicked()
+{
+    classDescriptionsFileName = QFileDialog::getOpenFileName();
+    QFile file(classDescriptionsFileName);
+    if (!file.open(QIODevice::ReadOnly | QFile::Text)){
+        QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
+    }
+
+    ReadFromFile_ValueLists(&file);
+
+    QString text;
+    for (auto list : valueLists.asKeyValueRange()){
+        text.append("valuelist \"" + list.first + "\"\n");
+        for (QString value : list.second){
+            text.append("value \"" + value + "\"\n");
+        }
+    }
+
+    ui->textEdit->setText(text);
+}
 
 void MainWindow::on_AddClassFile_Btn_clicked()
 {
@@ -122,7 +177,7 @@ void MainWindow::on_listLevels_currentItemChanged(QListWidgetItem *current, QLis
     ui->label_CurrentLevel->setText(current->text());
     PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, current->text().toInt());
 
-
+    if (currentClass == nullptr) { return; }
     QString text;
     text.append("Level: " + current->text() + "\n");
     QMap<QString, QMap<QString, QString>> *currentProgAttribs = &currentClass->ClassProgressions[current->text().toInt()].ProgAttrs;
@@ -184,21 +239,20 @@ void MainWindow::on_ProgAttrs_AllCheckBoxes_stateChanged(int arg1)
     currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
 }
 
-
 void MainWindow::on_tableWidget_Boosts_cellClicked(int row, int column)
 {
     //This reads (or sets) the text of the QTableWidgetItem - it needs to be added first if it doesn't exist
     //qobject_cast<QTableWidget*>(QObject::sender())->item(row, column)->setText("Dupa 2");
 
-    //This read data (text) from the cell
-    QString cellText = qobject_cast<QTableWidget*>(QObject::sender())->model()->index(row,column).data().toString();
+//    //This read data (text) from the cell
+//    QString cellText = qobject_cast<QTableWidget*>(QObject::sender())->model()->index(row,column).data().toString();
 
-    cellText += "_New";
+    //cellText += "_New";
 
     //This adds an item (text) to the cell
-    QAbstractItemModel* model = qobject_cast<QTableWidget*>(QObject::sender())->model();
-    QModelIndex idx = model->index(row, column);
-    model->setData(idx, QString(cellText)); //or QStringLiteral("some text"); or simply "some text";
+//    QAbstractItemModel* model = qobject_cast<QTableWidget*>(QObject::sender())->model();
+//    QModelIndex idx = model->index(row, column);
+    //model->setData(idx, QString(cellText)); //or QStringLiteral("some text"); or simply "some text";
 
 
     //This changes Widget in the cell - but if widget is in the cell, then cellClicked event is not called
@@ -208,21 +262,27 @@ void MainWindow::on_tableWidget_Boosts_cellClicked(int row, int column)
 //    }
 }
 
+void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel = 0){
+    if (widget == nullptr) { return; }
+    QString attrName = widget->objectName().split("_").last();
+    QString string;
+    for (int i = 0; i < tableWidget->rowCount(); i++){
+        int rowCount = tableWidget->rowCount();
+        QString rowString = tableWidget->model()->index(i,0).data().toString();
+        string = i ==  rowCount - 1 ? string + rowString :
+                     string + rowString + ";" ;
+    }
+    ((QLineEdit*)widget)->setText(string);
+    currentClass->ClassProgressions[progLevel].ProgAttrs[attrName]["value"] = string;
+}
+
 
 void MainWindow::on_tableWidget_Boosts_itemChanged(QTableWidgetItem *item)
 {
-    QString attrName = "Boosts";
     int level = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
     if (level <= 0) { return; }
-    QString string;
-    for (int i = 0; i < ui->tableWidget_Boosts->rowCount(); i++){
-        int rowCount = ui->tableWidget_Boosts->rowCount();
-        QString rowString = ui->tableWidget_Boosts->model()->index(i,0).data().toString();
-        string = i ==  rowCount - 1 ? string + rowString :
-           string + rowString + ";" ;
-    }
 
-    currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = string;
+    UpdateWidgetTextFromTableWidget(ui->lineEdit_Boosts, ui->tableWidget_Boosts, level);
 }
 
 
@@ -231,30 +291,29 @@ void MainWindow::on_btn_Boosts_AddRow_clicked()
     ui->tableWidget_Boosts->insertRow(ui->tableWidget_Boosts->rowCount());
 }
 
-void DeleteRow(QTableWidget* tw, int rowIndex){
+void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
+    QWidget* widget = nullptr;
+    if (tw == ui->tableWidget_Boosts){
+        widget = ui->lineEdit_Boosts;
+    }
     tw->removeRow(rowIndex);
+    int progLevel = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
+    if (progLevel <= 0) { return; }
+    UpdateWidgetTextFromTableWidget(widget, tw, progLevel);
 }
 
-QMenu* menu = nullptr;
+//How to pass a parameter to a function with connect:
+//https://forum.qt.io/topic/129966/connect-how-to-pass-a-parameter-to-the-function
 
+//How to create a context menu:
+//https://forum.qt.io/topic/111691/create-context-menu-when-right-click-on-header-of-qtreewidget
+//https://www.qtcentre.org/threads/24556-Adding-actions-to-a-context-menu
+//https://stackoverflow.com/questions/2711267/context-menu-creation-with-qt-designerqt-creator-ide
 void MainWindow::on_tableWidget_Boosts_customContextMenuRequested(const QPoint &pos)
 {
-    //How to pass a parameter to a function with connect:
-    //https://forum.qt.io/topic/129966/connect-how-to-pass-a-parameter-to-the-function
-
-    //How to create a context menu:
-    //https://forum.qt.io/topic/111691/create-context-menu-when-right-click-on-header-of-qtreewidget
-    //https://www.qtcentre.org/threads/24556-Adding-actions-to-a-context-menu
-    //https://stackoverflow.com/questions/2711267/context-menu-creation-with-qt-designerqt-creator-ide
-
-    int rowIndex = ui->tableWidget_Boosts->indexAt(pos).row();
-    //QTableWidgetItem* item = ui->tableWidget_Boosts->currentItem();
-    QTableWidget* tw = ui->tableWidget_Boosts;
-    //QMenu* menu = new QMenu();
-    menu = new QMenu();
-    QAction *action_DeleteRow = menu->addAction("Delete Row");
-    //connect(myAction, &QAction::triggered, this, [this, rowIndex](){ DeleteRow(ui->tableWidget_Boosts, rowIndex); });
-    connect(action_DeleteRow, &QAction::triggered, this, [tw, rowIndex, this](){ ui->tableWidget_Boosts->removeRow(rowIndex); });
-    menu->popup(ui->tableWidget_Boosts->viewport()->mapToGlobal(pos));
+    QTableWidget* tw = qobject_cast<QTableWidget*>(QObject::sender());
+    //tableContextMenu = new TableContextMenu(tw, pos, this);
+    new TableContextMenu(tw, pos, this);
 }
+
 
