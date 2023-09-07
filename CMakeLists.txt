@@ -27,6 +27,13 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         globalVars.h
         Resources/Resources.qrc
         Resources/Images/Classes_Background.png
+        tablecontextmenu.h tablecontextmenu.cpp
+        globalFunctions.h
+        globalFunctions.cpp
+        globalVars.cpp
+        lineeditintablewidget.h lineeditintablewidget.cpp
+
+
 
 
     )

@@ -4,6 +4,9 @@
 #include <QSqlDatabase>
 
 #include "globalVars.h"
+#include "globalFunctions.h"
+#include "lineeditintablewidget.h"
+#include "tablecontextmenu.h"
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -19,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->tableWidget_Boosts->hide();
     ui->btn_Boosts_AddRow->hide();
+    listWidget_AutoFill = ui->list_AutoFill;
+    listWidget_AutoFill->hide();
 
     ui->lineEdit_Boosts->installEventFilter(this);
     ui->frame_LevelProgression->installEventFilter(this);
@@ -44,7 +49,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     if (obj == (QObject*)ui->lineEdit_Boosts) {
         if (event->type() == QEvent::MouseButtonPress)
         {
-            PrintValuesToTableWidget(ui->tableWidget_Boosts, ui->lineEdit_Boosts->text());
+            PrintValuesToTableWidget(ui->tableWidget_Boosts, ui->lineEdit_Boosts->text(), this);
             ui->tableWidget_Boosts->show();
             ui->btn_Boosts_AddRow->show();
         }
@@ -54,6 +59,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         {
             ui->tableWidget_Boosts->hide();
             ui->btn_Boosts_AddRow->hide();
+            listWidget_AutoFill->hide();
         }
     }
     return QWidget::eventFilter(obj, event);
@@ -112,9 +118,8 @@ void MainWindow::on_AddValueListsFile_Btn_clicked()
     }
 
     ReadFromFile_ValueLists(&file);
-
     QString text;
-    for (auto list : valueLists.asKeyValueRange()){
+    for (auto list : MenuSubitemsLists.asKeyValueRange()){
         text.append("valuelist \"" + list.first + "\"\n");
         for (QString value : list.second){
             text.append("value \"" + value + "\"\n");
@@ -167,15 +172,15 @@ void MainWindow::on_listClasses_currentItemChanged(QListWidgetItem *current, QLi
     currentClass = &existingClasses[current->text()];
     ui->label_CurrentClass->setText(current->text());
 
-    PrintValuesToWidgetsInFrame(ui->frame_ClassDescription);
+    PrintValuesToWidgetsInFrame(ui->frame_ClassDescription, this);
     int level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text().toInt() : 1;
-    PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, level);
+    PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this, level);
 }
 
 void MainWindow::on_listLevels_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
     ui->label_CurrentLevel->setText(current->text());
-    PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, current->text().toInt());
+    PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this,  current->text().toInt());
 
     if (currentClass == nullptr) { return; }
     QString text;
@@ -262,25 +267,50 @@ void MainWindow::on_tableWidget_Boosts_cellClicked(int row, int column)
 //    }
 }
 
-void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel = 0){
-    if (widget == nullptr) { return; }
-    QString attrName = widget->objectName().split("_").last();
-    QString string;
-    for (int i = 0; i < tableWidget->rowCount(); i++){
-        int rowCount = tableWidget->rowCount();
-        QString rowString = tableWidget->model()->index(i,0).data().toString();
-        string = i ==  rowCount - 1 ? string + rowString :
-                     string + rowString + ";" ;
+
+void DisplayAutoFillBoostsForLineEdit(QLineEdit* lineEdit, QLineEdit* lineEdit2, QMainWindow* mw, QTextEdit* te){
+    QFrame* parentWidget = (QFrame*)lineEdit->parentWidget();
+    QString attrValue = lineEdit->text();
+    QPoint posToShowAutoFillWindow = QPoint(lineEdit->pos().x(), lineEdit->pos().y() + lineEdit->height());
+    int cursorPosInLineEdit = lineEdit->cursorPosition();
+    lineEdit2->setText(QString::number(cursorPosInLineEdit));
+    QListWidget* list = new QListWidget();
+    for (QString arg : List_ActionResource){
+        list->addItem(arg);
     }
-    ((QLineEdit*)widget)->setText(string);
-    currentClass->ClassProgressions[progLevel].ProgAttrs[attrName]["value"] = string;
+    list->setParent(parentWidget);
+    list->show();
+    list->move(posToShowAutoFillWindow);
 }
 
+void DisplayAutoFillBoostsForTableItemChanged(QTableWidgetItem* item, QTableWidget* parentTable, QLineEdit* lineEdit2){
+    QMessageBox Msgbox;
+    Msgbox.setText("Dupa");
+    Msgbox.exec();
+
+    if (parentTable->currentItem() != item) { return; }
+    QWidget* parentFrame = parentTable->parentWidget();
+    QString attrValue = item->text();
+    int rowHeight = parentTable->rowHeight(item->row());
+    QPoint itemBottomPos = QPoint(parentTable->pos().x(), parentTable->pos().y() + rowHeight * parentTable->rowCount());
+
+    //int cursorPosInLineEdit = ((QLineEdit*)item)->cursorPosition();
+    //lineEdit2->setText(QString::number(cursorPosInLineEdit));
+    QListWidget* list = new QListWidget();
+    for (QString arg : List_ActionResource){
+        list->addItem(arg);
+    }
+    list->setParent(parentFrame);
+    list->show();
+    list->move(itemBottomPos);
+}
 
 void MainWindow::on_tableWidget_Boosts_itemChanged(QTableWidgetItem *item)
 {
     int level = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
     if (level <= 0) { return; }
+
+    DisplayAutoFillBoostsForTableItemChanged(item, item->tableWidget(), ui->lineEdit_PassivesAdded);
 
     UpdateWidgetTextFromTableWidget(ui->lineEdit_Boosts, ui->tableWidget_Boosts, level);
 }
@@ -288,7 +318,11 @@ void MainWindow::on_tableWidget_Boosts_itemChanged(QTableWidgetItem *item)
 
 void MainWindow::on_btn_Boosts_AddRow_clicked()
 {
-    ui->tableWidget_Boosts->insertRow(ui->tableWidget_Boosts->rowCount());
+    int rowIndex = ui->tableWidget_Boosts->rowCount();
+    ui->tableWidget_Boosts->insertRow(rowIndex);
+    //ui->tableWidget_Boosts->setCellWidget(rowIndex, 0, new QLineEdit);
+    new LineEditInTableWidget(ui->tableWidget_Boosts, rowIndex, 0, "", this);
+    //CreateLineEditAsTableItem(ui->tableWidget_Boosts, rowIndex, 0, "");
 }
 
 void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
@@ -296,6 +330,7 @@ void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
     if (tw == ui->tableWidget_Boosts){
         widget = ui->lineEdit_Boosts;
     }
+    ui->textEdit->setText(QString::number(rowIndex));
     tw->removeRow(rowIndex);
     int progLevel = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
     if (progLevel <= 0) { return; }
@@ -312,8 +347,15 @@ void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
 void MainWindow::on_tableWidget_Boosts_customContextMenuRequested(const QPoint &pos)
 {
     QTableWidget* tw = qobject_cast<QTableWidget*>(QObject::sender());
-    //tableContextMenu = new TableContextMenu(tw, pos, this);
-    new TableContextMenu(tw, pos, this);
+    //new TableContextMenu(tw, pos, this);
 }
 
+
+
+
+void MainWindow::on_lineEdit_Boosts_cursorPositionChanged(int arg1, int arg2)
+{
+    //DisplayAutoFillBoostsForLineEdit(ui->lineEdit_Boosts, ui->lineEdit_PassivesAdded, this, ui->textEdit);
+    //ui->lineEdit_PassivesAdded->setText(QString::number(arg2));
+}
 
