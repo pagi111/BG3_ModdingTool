@@ -24,6 +24,7 @@ public:
 
     bool eventFilter(QObject *obj, QEvent *event);
     void TableDeleteRow(QTableWidget* tw, int rowIndex);
+    Ui::MainWindow *ui;
 
 private slots:
     void on_AddClassFile_Btn_clicked();
@@ -36,27 +37,30 @@ private slots:
 
     void on_listLevels_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
 
-    void on_ClassAttrs_AllLineEdits_textEdited(const QString &arg1);
-    void on_ProgAttrs_AllLineEdits_textEdited(const QString &arg1);
+    void on_ClassAttrs_AllLineEdits_textChanged(const QString &arg1);
+    void on_ProgAttrs_AllLineEdits_textChanged(const QString &arg1);
     void on_ClassAttrs_AllCheckBoxes_stateChanged(int arg1);
     void on_ProgAttrs_AllCheckBoxes_stateChanged(int arg1);
 
-    void on_tableWidget_Boosts_cellClicked(int row, int column);
-
-    void on_tableWidget_Boosts_itemChanged(QTableWidgetItem *item);
+    void on_ClassAttrs_AllLineEdits_textEdited(const QString &arg1);
+    void on_ProgAttrs_AllLineEdits_textEdited(const QString &arg1);
+    void on_ClassAttrs_AllCheckBoxes_clicked();
+    void on_ProgAttrs_AllCheckBoxes_clicked();
 
     void on_btn_Boosts_AddRow_clicked();
 
-    void on_tableWidget_Boosts_customContextMenuRequested(const QPoint &pos);
-
     void on_AddValueListsFile_Btn_clicked();
 
-    void on_lineEdit_Boosts_cursorPositionChanged(int arg1, int arg2);
+    void on_ImportAllFiles_Btn_clicked();
+
+    void on_ResetHistory_Btn_clicked();
+
+    void on_listWidget_ClassDescFiles_customContextMenuRequested(const QPoint &pos);
 
 private:
-    Ui::MainWindow *ui;
     void ConnectWidgetsInFrameClassDescription();
     void ConnectWidgetsInFrameLevelProgression();
+    void ReadFromFile_History();
 
 };
 #endif // MAINWINDOW_H

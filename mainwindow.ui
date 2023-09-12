@@ -30,8 +30,8 @@
    <widget class="QPushButton" name="AddClassFile_Btn">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>10</y>
+      <x>510</x>
+      <y>100</y>
       <width>151</width>
       <height>24</height>
      </rect>
@@ -62,7 +62,7 @@
      <number>16</number>
     </property>
     <property name="dragDropMode">
-     <enum>QAbstractItemView::NoDragDrop</enum>
+     <enum>QAbstractItemView::DragOnly</enum>
     </property>
     <property name="defaultDropAction">
      <enum>Qt::MoveAction</enum>
@@ -94,6 +94,14 @@
     <item>
      <property name="text">
       <string>1</string>
+     </property>
+     <property name="textAlignment">
+      <set>AlignCenter</set>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>1m</string>
      </property>
      <property name="textAlignment">
       <set>AlignCenter</set>
@@ -210,7 +218,7 @@
      <number>16</number>
     </property>
     <property name="dragDropMode">
-     <enum>QAbstractItemView::NoDragDrop</enum>
+     <enum>QAbstractItemView::DragOnly</enum>
     </property>
     <property name="defaultDropAction">
      <enum>Qt::MoveAction</enum>
@@ -243,8 +251,8 @@
    <widget class="QPushButton" name="AddProgressionFile_Btn">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>50</y>
+      <x>690</x>
+      <y>100</y>
       <width>151</width>
       <height>24</height>
      </rect>
@@ -256,8 +264,8 @@
    <widget class="QPushButton" name="SaveAllToFiles_Btn">
     <property name="geometry">
      <rect>
-      <x>250</x>
-      <y>190</y>
+      <x>350</x>
+      <y>100</y>
       <width>151</width>
       <height>24</height>
      </rect>
@@ -1702,8 +1710,8 @@ color: rgb(255, 255, 255);</string>
     <widget class="QCheckBox" name="chbx_IsMulticlass">
      <property name="geometry">
       <rect>
-       <x>510</x>
-       <y>170</y>
+       <x>490</x>
+       <y>130</y>
        <width>101</width>
        <height>31</height>
       </rect>
@@ -2020,18 +2028,117 @@ color: rgb(255, 255, 255);</string>
       <set>QAbstractItemView::NoEditTriggers</set>
      </property>
     </widget>
+    <zorder>label_CurrentLevel</zorder>
+    <zorder>lineEdit_Boosts</zorder>
+    <zorder>lineEdit_PassivesAdded</zorder>
+    <zorder>lineEdit_Selectors</zorder>
+    <zorder>lineEdit_TableUUID</zorder>
+    <zorder>lineEdit_UUID</zorder>
+    <zorder>lineEdit_PassivesRemoved</zorder>
+    <zorder>lineEdit_Name</zorder>
+    <zorder>lineEdit_ProgressionType</zorder>
+    <zorder>lineEdit_Level</zorder>
+    <zorder>chbx_IsMulticlass</zorder>
+    <zorder>label_Name</zorder>
+    <zorder>label_Level</zorder>
+    <zorder>label_ProgressionType</zorder>
+    <zorder>label_Boosts</zorder>
+    <zorder>label_PassivesAdded</zorder>
+    <zorder>label_PassivesRemoved</zorder>
+    <zorder>label_Selectors</zorder>
+    <zorder>label_TableUUID</zorder>
+    <zorder>label_UUID_2</zorder>
+    <zorder>btn_Boosts_AddRow</zorder>
+    <zorder>list_AutoFill</zorder>
+    <zorder>tableWidget_Boosts</zorder>
    </widget>
    <widget class="QPushButton" name="AddValueListsFile_Btn">
     <property name="geometry">
      <rect>
-      <x>420</x>
-      <y>10</y>
-      <width>151</width>
+      <x>390</x>
+      <y>70</y>
+      <width>111</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
      <string>Add ValueLists File</string>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="listWidget_ClassDescFiles">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>10</y>
+      <width>331</width>
+      <height>81</height>
+     </rect>
+    </property>
+    <property name="contextMenuPolicy">
+     <enum>Qt::CustomContextMenu</enum>
+    </property>
+    <property name="acceptDrops">
+     <bool>true</bool>
+    </property>
+    <property name="dragEnabled">
+     <bool>true</bool>
+    </property>
+    <property name="dragDropOverwriteMode">
+     <bool>true</bool>
+    </property>
+    <property name="dragDropMode">
+     <enum>QAbstractItemView::DragDrop</enum>
+    </property>
+    <property name="defaultDropAction">
+     <enum>Qt::MoveAction</enum>
+    </property>
+   </widget>
+   <widget class="QListWidget" name="listWidget_ClassProgFiles">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>130</y>
+      <width>331</width>
+      <height>91</height>
+     </rect>
+    </property>
+    <property name="dragEnabled">
+     <bool>true</bool>
+    </property>
+    <property name="dragDropOverwriteMode">
+     <bool>true</bool>
+    </property>
+    <property name="dragDropMode">
+     <enum>QAbstractItemView::DragDrop</enum>
+    </property>
+    <property name="defaultDropAction">
+     <enum>Qt::MoveAction</enum>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="ImportAllFiles_Btn">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>10</y>
+      <width>91</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Import All</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="ResetHistory_Btn">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>40</y>
+      <width>91</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Reset History</string>
     </property>
    </widget>
    <zorder>textEdit</zorder>
@@ -2043,6 +2150,10 @@ color: rgb(255, 255, 255);</string>
    <zorder>frame_LevelProgression</zorder>
    <zorder>frame_ClassDescription</zorder>
    <zorder>AddValueListsFile_Btn</zorder>
+   <zorder>listWidget_ClassDescFiles</zorder>
+   <zorder>listWidget_ClassProgFiles</zorder>
+   <zorder>ImportAllFiles_Btn</zorder>
+   <zorder>ResetHistory_Btn</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

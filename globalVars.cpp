@@ -45,7 +45,9 @@ QMap<QString, CharacterClass> existingClasses;
 CharacterClass* currentClass;
 QString classDescriptionsFileName;
 QString progressionsFileName;
-QListWidget* listWidget_AutoFill;
+QString historyFileName;
+QString baseDirectoryPath = QCoreApplication::applicationDirPath();
+//QListWidget* listWidget_AutoFill;
 
 QList<QString> List_Interrupt {
     "Interrupt_DefensiveDuelist",
@@ -182,11 +184,11 @@ QMap<QString, QList<QString>> boostsHints {
   {"ActionResourceOverride",                QList<QString>{ "(ActionResource, NewResourceCount(??), ResourceLevel) [(Interrupt_HellishRebukeWarlockMI_Charge,1,0)]" } },
   {"ActionResourceReplenishTypeOverride",   QList<QString>{ "(ActionResource, ReplenishType) [(BardicInspiration,ShortRest)]" } },
   {"UnlockSpell",                           QList<QString>{ "(Spell) [(Target_BardicInspiration)]", "(Spell, Singular(??)) [(Shout_MageArmor_ArmorOfShadows, Singular)]", "(Spell, Singular/AddChildre, Children, Replenish, Ability) [(Target_TrueStrike,,,,Wisdom) or (Target_Grease,Singular,None,UntilRest,Wisdom) or (Target_GaseousForm,AddChildren,d136c5d9-0ff0-43da-acce-a74a07f8d6bf,,Wisdom)]" } },
-  {"Proficiency",                           QList<QString>{ "(Skill) [(Arcana)]" } },
+  {"Proficiency",                           QList<QString>{ "(ProficiencyGroupFlags) [(Daggers)]" } },
   {"ProficiencyBonus",                      QList<QString>{ "(_Skill, Skill) [(Skill, History)]", "(_SavingThrow, Ability) [(SavingThrow, Charisma)]" } },
   {"ExpertiseBonus",                        QList<QString>{ "(Skill) [(Arcana)]" } },
   {"Resistance",                            QList<QString>{ "(Damage Type, _Resistant) [(Poison, Resistant)]" } },
-  {"StatusImmunity",                        QList<QString>{ "(Status) [(SG_Blinded)]" } },
+  {"StatusImmunity",                        QList<QString>{ "(StatusGroupFlags) [(SG_Blinded)]" } },
   {"UnlockInterrupt",                       QList<QString>{ "(Interrupt)" } },
   {"Tag",                                   QList<QString>{ "(Tag)" } },
   {"Advantage",                             QList<QString>{ "(int)" } },

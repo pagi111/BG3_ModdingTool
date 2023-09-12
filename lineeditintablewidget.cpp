@@ -1,12 +1,19 @@
 #include "lineeditintablewidget.h"
+#include "globalFunctions.h"
 #include "globalVars.h"
 #include "qevent.h"
 #include "tablecontextmenu.h"
+#include "ui_mainwindow.h"
+
+LineEditInTableWidget::~LineEditInTableWidget(){
+    delete listWidget_AutoFill;
+}
 
 LineEditInTableWidget::LineEditInTableWidget(QTableWidget* tw, int row, int col, QString text, MainWindow* mw)
 {
     this->setText(text);
     this->setFrame(false);
+    listWidget_AutoFill = new QListWidget;
 
     connect(this, &LineEditInTableWidget::sglMousePress, [tw, this, mw] (QMouseEvent* event){
         if (event->button() == Qt::MouseButton::RightButton){
@@ -36,59 +43,79 @@ LineEditInTableWidget::LineEditInTableWidget(QTableWidget* tw, int row, int col,
         }
     });
 
-    connect(this, &QLineEdit::textChanged, [tw, this, mw]() {
+    connect(this, &QLineEdit::textChanged, [tw, this, mw](const QString &arg1) {
+        //This updates text in the lineEdit_Boosts in frame_Progressions
+        UpdateWidgetTextFromTableWidget(mw->ui->lineEdit_Boosts, tw);
+
+        QString level = mw->ui->listLevels->currentItem() != nullptr ? mw->ui->listLevels->currentItem()->text() : "0";
+        if (level != "0"){
+            currentClass->ClassProgressions[level].ProgAttrs["Boosts"]["value"] = arg1;
+        }
+
+        //This part is about showing a list of possible items for autofill
         QPoint pos = QPoint(this->pos().x(), this->pos().y() + this->height());
-        QString leText = this->text();
         QString boost = this->text().split("(").first();
         QString boostArgsString = this->text().split("(").last();
+        if (boost == boostArgsString) { return; }   //They being the same means there is no "(" to split
         boostArgsString.removeAt(boostArgsString.lastIndexOf(")"));
-        qDebug() << "boostArgsString: " << boostArgsString;
-
-
         QStringList boostArgs = boostArgsString.split(",");
+
         int cursorPosInArgs = this->cursorPosition() - boost.length();
-        qDebug() << "Cursor: " << cursorPosInArgs;
-        qDebug() << "BoostLength: " << boostArgsString.length();
         int boostArgNumber = 1;
-
         //cursor at the end of the line means at least boostArgsString.length() + 1
-        if (cursorPosInArgs - 1 > boostArgsString.length()){
-            return;
+        if (cursorPosInArgs - 1 > boostArgsString.length()) { return; }
+        for (int i = 0; i < cursorPosInArgs - 1; i++){
+            if (boostArgsString[i] == ',') { boostArgNumber++; }
         }
-        else {
-            for (int i = 0; i < cursorPosInArgs - 1; i++){
-                if (boostArgsString[i] == ',') { boostArgNumber++; }
+
+        //It will only take the listName from the last Variant anyway - need to improve it
+        QStringList listNames;
+        if (boost == "ProficiencyBonus" && boostArgs[0].trimmed() == "Skill"){
+            listNames.clear();
+            listNames.append("Skill");
+        }
+        else if (boost == "ProficiencyBonus" && boostArgs[0].trimmed() == "SavingThrow"){
+            listNames.clear();
+            listNames.append("Ability");
+        }
+        else{
+            for (QString boostArgsVariant : boostsHints[boost]){
+                QStringList variantArgs = boostArgsVariant.split("[").first().replace("(", "").replace(")", "").split(",");
+                if (boostArgNumber <= variantArgs.count()){
+                    listNames = variantArgs[boostArgNumber - 1].split("/");
+                }
             }
         }
-
-        qDebug() << "boostArgNumber: " << boostArgNumber;
-
-        QString listName;
-        for (QString boostVariant : boostsHints[boost]){
-            QStringList arguments = boostVariant.split("[").first().replace("(", "").replace(")", "").split(",");
-            qDebug() << "arguments: " << arguments;
-            if (boostArgNumber <= arguments.count()){
-                listName = "List_" + arguments[boostArgNumber - 1].trimmed();
-            }
-        }
-
-        qDebug() << "listName: " << listName;
-        qDebug() << "boostArgs[boostArgNumber - 1]: " << boostArgs[boostArgNumber - 1];
+        if (listNames.count() == 0) { return; }
 
         listWidget_AutoFill->clear();
-//        for (QString arg : List_ActionResource){
-//            if (arg.contains(leText, Qt::CaseInsensitive)){
-//                listWidget_AutoFill->addItem(arg);
-//            }
-//        }
-        for (QString arg : MenuSubitemsLists[listName]){
-            if (arg.contains(boostArgs[boostArgNumber - 1].trimmed(), Qt::CaseInsensitive)){
-                listWidget_AutoFill->addItem(arg);
+        for (QString listName : listNames){
+            for (QString arg : MenuSubitemsLists["List_" + listName.trimmed()]){
+                if (arg.contains(boostArgs[boostArgNumber - 1].trimmed(), Qt::CaseInsensitive)){
+                    listWidget_AutoFill->addItem(arg);
+                    connect(listWidget_AutoFill, &QListWidget::itemActivated, listWidget_AutoFill, [this, boost, boostArgs, boostArgNumber] (QListWidgetItem* item){
+                        QString newBoostText = boost + "(";
+                        for (int i = 0; i < boostArgs.count(); i++){
+                            if (i == boostArgNumber - 1) { newBoostText.append(item->text()); }
+                            else { newBoostText.append(boostArgs[i]); }
+                            if (i == boostArgs.count() - 1){
+                                newBoostText.append(")");
+                            }
+                            else {
+                                newBoostText.append(", ");
+                            }
+                        }
+                        this->setText(newBoostText);
+                    });
+                }
             }
         }
+        if (listWidget_AutoFill->count() == 0) { return; }
         listWidget_AutoFill->setParent(tw);
         listWidget_AutoFill->show();
+        listWidget_AutoFill->setGeometry(pos.x(), pos.y(), 281, 91);
         listWidget_AutoFill->move(pos);
+
     });
 
     tw->setCellWidget(row, col, this);

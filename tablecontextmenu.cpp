@@ -106,149 +106,38 @@ QString boostsTypes2[] {
 
 };
 
-
-//Older Constructor
-//, const QPoint &mousePos
-TableContextMenu::TableContextMenu(QTableWidget* sender, MainWindow* mainWindow){
-    QPoint pos = QCursor::pos();
-
-    QAbstractItemModel* model = sender->model();
-    //QModelIndex idx = sender->indexAt(mousePos);
-    QModelIndex idx = sender->indexAt(pos);
-
-    auto AddMenuAction = [model, idx, this](QString actionText, QMenu* submenu)
-    {
-        QAction* action = submenu->addAction(actionText);
-        QString boostText = submenu->title() + "(" + actionText + ")";
-        //action->setToolTip("ActionDupa"); //It's not possible without a lot of additional code...
-        connect(action, &QAction::triggered, this, [model, idx, boostText, this]() {
-            model->setData(idx,QString(boostText));
-            delete this;
-        });
-    };
-
-
-    auto AddTooltip = [](QString boostName, QString* tooltipText){
-        if (boostsHints[boostName].count() > 1){
-            tooltipText->append(boostName + ": \n");
-            for (int i = 0; i < boostsHints[boostName].count(); i++){
-                QList<QString> hintWithExample = boostsHints[boostName][i].split("[");
-                tooltipText->append("    " + QString::number(i+1) + ") " + hintWithExample.first());
-                if (hintWithExample.count() > 1) {
-                    tooltipText->append("        [" + boostName + hintWithExample.last());
-                }
-                tooltipText->append("\n");
-            }
-        }
-        else {
-            QList<QString> hintWithExample = boostsHints[boostName].first().split("[");
-            tooltipText->append(boostName + hintWithExample.first());
-            if (hintWithExample.count() > 1) {
-                tooltipText->append("        [" + boostName + hintWithExample.last());
-            }
-            tooltipText->append("\n");
-        }
-    };
-
-    for (QString boost : boostsTypes){
-        if (boost == "Other"){
-            QMenu* menu = this->addMenu(boost);
-            QString tooltipText;
-            for (QString boost : boostsTypes_Other){
-                AddTooltip(boost, &tooltipText);
-            }
-            menu->setToolTip(tooltipText);
-            for (QString otherBoost : boostsTypes_Other){
-                AddMenuAction(otherBoost, menu);
-            }
-        }
-        else {
-            QMenu* menu = this->addMenu(boost);
-            QString tooltipText;
-            AddTooltip(boost, &tooltipText);
-            menu->setToolTip(tooltipText);
-            for (QString subitem : MenuSubitemsLists[BoostType_SubitemsList_Match[boost]]){
-                AddMenuAction(subitem, menu);
-            }
-        }
-
-    }
-
-    this->addSeparator();
-    QAction *action_DeleteRow = this->addAction("Delete Row");
-    connect(action_DeleteRow, &QAction::triggered, this, [sender, idx, mainWindow, this](){
-        mainWindow->TableDeleteRow(sender, idx.row());
-        delete this;
-    });
-    //connect(action_DeleteRow, &QAction::triggered, this, [tw, rowIndex, this](){ ui->tableWidget_Boosts->removeRow(rowIndex); });
-
-    this->popup(pos);
-    //this->popup(sender->viewport()->mapToGlobal(mousePos));
-};
-
-
 //New Constructor - with QLineEdits in Table
 TableContextMenu::TableContextMenu(QTableWidget* tw, QLineEdit* le, MainWindow* mainWindow){
     QPoint pos = QCursor::pos();
     QModelIndex idx = tw->indexAt(tw->viewport()->mapFromGlobal(pos));
 
-    auto AddMenuAction = [le, this](QString actionText, QMenu* submenu)
+    auto AddMenuAction = [le, this](QString argumentsText, QString exampleText, QString boostType, QMenu* submenu)
     {
-        QAction* action = submenu->addAction(actionText);
-        //QString boostText = submenu->title() + "(" + actionText + ")";
-        QString boostText = submenu->title() + actionText.replace("_", "");
+        QAction* action = submenu->addAction(boostType + argumentsText);
+        //QString boostText = boostType + argumentsText.replace("_", "");
+        QString boostText = boostType + exampleText.removeAt(exampleText.lastIndexOf("]"));
+        action->setToolTip("Example: " + boostType + exampleText.removeAt(exampleText.lastIndexOf("]")));
         connect(action, &QAction::triggered, this, [le, this, boostText]() {
             le->setText(boostText);
             delete this;
         });
     };
 
-
-    auto AddTooltip = [](QString boostName, QString* tooltipText){
-        if (boostsHints[boostName].count() > 1){
-            tooltipText->append(boostName + ": \n");
-            for (int i = 0; i < boostsHints[boostName].count(); i++){
-                QList<QString> hintWithExample = boostsHints[boostName][i].split("[");
-                tooltipText->append("    " + QString::number(i+1) + ") " + hintWithExample.first());
-                if (hintWithExample.count() > 1) {
-                    tooltipText->append("        [" + boostName + hintWithExample.last());
-                }
-                tooltipText->append("\n");
-            }
-        }
-        else {
-            QList<QString> hintWithExample = boostsHints[boostName].first().split("[");
-            tooltipText->append(boostName + hintWithExample.first());
-            if (hintWithExample.count() > 1) {
-                tooltipText->append("        [" + boostName + hintWithExample.last());
-            }
-            tooltipText->append("\n");
-        }
-    };
-
     for (QString boost : boostsTypes){
+        QMenu* menu = this->addMenu(boost);
+        menu->setToolTipsVisible(true);
         if (boost == "Other"){
-            QMenu* menu = this->addMenu(boost);
-            QString tooltipText;
-            for (QString boost : boostsTypes_Other){
-                AddTooltip(boost, &tooltipText);
-            }
-            menu->setToolTip(tooltipText);
             for (QString otherBoost : boostsTypes_Other){
-                AddMenuAction(otherBoost, menu);
+                AddMenuAction(boostsHints[otherBoost].first().split("[").first().trimmed(),
+                              boostsHints[otherBoost].first().split("[").last(),
+                              otherBoost,
+                              menu); //There are no variants for 'Others' so always take the item [0]
             }
         }
         else {
-            QMenu* menu = this->addMenu(boost);
-            QString tooltipText;
-            AddTooltip(boost, &tooltipText);
-            menu->setToolTip(tooltipText);
             for (QString variant : boostsHints[boost]){ //variant of a boost taken from the list corresponding to that boost
-                AddMenuAction(variant.split("[").first().trimmed(), menu);    //the first item before '[' is the variant; after '[' there is an example use
+                AddMenuAction(variant.split("[").first().trimmed(), variant.split("[").last(), boost, menu);    //the first item before '[' is the variant; after '[' there is an example use
             }
-//            for (QString subitem : MenuSubitemsLists[BoostType_SubitemsList_Match[boost]]){
-//                AddMenuAction(subitem, menu);
-//            }
         }
 
     }

@@ -15,11 +15,12 @@ QMap<QString, QString> FindAttrsInLine(QString* id, QString* line);
 
 void CreateLineEditAsTableItem(QTableWidget* tw, int row, int col, QString text);
 
-void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel = 0);
+//void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel = 0);
+void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget);
 
 void PrintValuesToTableWidget(QTableWidget* tw, QString attrValue, MainWindow* mw);
 
-void PrintValuesToWidgetsInFrame(QFrame* frame, MainWindow *mw, int level = 1);
+void PrintValuesToWidgetsInFrame(QFrame* frame, MainWindow *mw, QString level = "1");
 
 void ReadFromFile_Attributes(QFile *file);
 

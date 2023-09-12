@@ -32,6 +32,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         globalFunctions.cpp
         globalVars.cpp
         lineeditintablewidget.h lineeditintablewidget.cpp
+        historyfile.h historyfile.cpp
 
 
 

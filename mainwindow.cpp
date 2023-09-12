@@ -5,8 +5,9 @@
 
 #include "globalVars.h"
 #include "globalFunctions.h"
+#include "historyfile.h"
 #include "lineeditintablewidget.h"
-#include "tablecontextmenu.h"
+#include <algorithm>    //for std::sort
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -14,19 +15,18 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    HistoryFile::Read(this);
     ConnectWidgetsInFrameClassDescription();
     ConnectWidgetsInFrameLevelProgression();
 
-    //ui->tableWidget->setIndexWidget(ui->tableWidget->model()->index(3, 1), new QPushButton("Button"));
-    //ui->tableWidget->setItem(3, 2, new QTableWidgetItem("Item"));
-
     ui->tableWidget_Boosts->hide();
     ui->btn_Boosts_AddRow->hide();
-    listWidget_AutoFill = ui->list_AutoFill;
-    listWidget_AutoFill->hide();
+    //listWidget_AutoFill = new QListWidget;
+    ui->list_AutoFill->hide();
 
     ui->lineEdit_Boosts->installEventFilter(this);
     ui->frame_LevelProgression->installEventFilter(this);
+    this->installEventFilter(this);
 
     QTableWidget* tableWidget = new MyTableClass();
     tableWidget->setRowCount(50);
@@ -59,7 +59,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         {
             ui->tableWidget_Boosts->hide();
             ui->btn_Boosts_AddRow->hide();
-            listWidget_AutoFill->hide();
+            //delete listWidget_AutoFill;
+        }
+    }
+    if (obj == (QObject*)this) {
+        if (event->type() == QEvent::Close)
+        {
+            qDebug() << "Main Window closed";
+            HistoryFile::Write(this);
         }
     }
     return QWidget::eventFilter(obj, event);
@@ -83,10 +90,21 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 void MainWindow::ConnectWidgetsInFrameClassDescription(){
     for (auto widget : ui->frame_ClassDescription->children()) {
         if (QLineEdit* lineEdit = qobject_cast<QLineEdit*>(widget)) {
+            //Previously it was on textEdited, not textChanged (textEdited is called only when the user manually changes the text;
+            //textChanged is called when the text changes by any means (also programatically)
+            //With textChanged this function (which updates the data in the class fields) is called right after the data is loaded into the lineEdit
+            //from the class - the same data that is in the class is displayed in the lineEdit, then the function is called because the text
+            //changed and the same text is assigned back to the class fields essentially changing nothing - just wasted resources
+            //Also, the biggest problem is, that when text changes because another class or progression was chosen, it poses possible problems
+            //(like assigning data to the wrong class, especially when changing level value or multiclass)
+            //However with textEdited I also need to assign changes to the class if I use the tableWidget that contains data from the lineEdit
+
+            //connect(lineEdit, &QLineEdit::textChanged, this, &MainWindow::on_ClassAttrs_AllLineEdits_textChanged);
             connect(lineEdit, &QLineEdit::textEdited, this, &MainWindow::on_ClassAttrs_AllLineEdits_textEdited);
         }
         else if (QCheckBox* chbx = qobject_cast<QCheckBox*>(widget)) {
-            connect(chbx, &QCheckBox::stateChanged, this, &MainWindow::on_ClassAttrs_AllCheckBoxes_stateChanged);
+            //connect(chbx, &QCheckBox::stateChanged, this, &MainWindow::on_ClassAttrs_AllCheckBoxes_stateChanged);
+            connect(chbx, &QCheckBox::clicked, this, &MainWindow::on_ClassAttrs_AllCheckBoxes_clicked);
         }
     }
 }
@@ -94,10 +112,12 @@ void MainWindow::ConnectWidgetsInFrameClassDescription(){
 void MainWindow::ConnectWidgetsInFrameLevelProgression(){
     for (auto widget : ui->frame_LevelProgression->children()) {
         if (QLineEdit* lineEdit = qobject_cast<QLineEdit*>(widget)) {
+            //connect(lineEdit, &QLineEdit::textChanged, this, &MainWindow::on_ProgAttrs_AllLineEdits_textChanged);
             connect(lineEdit, &QLineEdit::textEdited, this, &MainWindow::on_ProgAttrs_AllLineEdits_textEdited);
         }
         else if (QCheckBox* chbx = qobject_cast<QCheckBox*>(widget)) {
-            connect(chbx, &QCheckBox::stateChanged, this, &MainWindow::on_ProgAttrs_AllCheckBoxes_stateChanged);
+            //connect(chbx, &QCheckBox::stateChanged, this, &MainWindow::on_ProgAttrs_AllCheckBoxes_stateChanged);
+            connect(chbx, &QCheckBox::clicked, this, &MainWindow::on_ProgAttrs_AllCheckBoxes_clicked);
         }
     }
 }
@@ -108,7 +128,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-
 void MainWindow::on_AddValueListsFile_Btn_clicked()
 {
     classDescriptionsFileName = QFileDialog::getOpenFileName();
@@ -118,15 +137,15 @@ void MainWindow::on_AddValueListsFile_Btn_clicked()
     }
 
     ReadFromFile_ValueLists(&file);
-    QString text;
-    for (auto list : MenuSubitemsLists.asKeyValueRange()){
-        text.append("valuelist \"" + list.first + "\"\n");
-        for (QString value : list.second){
-            text.append("value \"" + value + "\"\n");
-        }
-    }
 
-    ui->textEdit->setText(text);
+//    QString text;
+//    for (auto list : MenuSubitemsLists.asKeyValueRange()){
+//        text.append("valuelist \"" + list.first + "\"\n");
+//        for (QString value : list.second){
+//            text.append("value \"" + value + "\"\n");
+//        }
+//    }
+//    ui->textEdit->setText(text);
 }
 
 void MainWindow::on_AddClassFile_Btn_clicked()
@@ -137,23 +156,36 @@ void MainWindow::on_AddClassFile_Btn_clicked()
         QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
     }
 
-    ReadFromFile_Attributes(&file);
+    //ReadFromFile_Attributes(&file);
+    HistoryFile::AddFileToHistoryList(classDescriptionsFileName, &HistoryFile::classDescriptionsList, this);
 
-    QString text;
-    for(CharacterClass c : existingClasses) {
-        text.append("-------Class Name: " + c.ClassAttrs["Name"]["value"] + "--------\n");
-        for (QString attrID : c.ClassAttrs.keys()){
-            text.append(attrID + " :: ");
-            for (QString string : c.ClassAttrs[attrID].keys()){
-                text.append(string + "=" + c.ClassAttrs[attrID][string] + " ");
-            }
-            text.append("\n");
-        }
+//    QString text;
+//    ui->listClasses->clear();
+//    for(auto c : existingClasses.asKeyValueRange()) {
+//        //This adds Progressions that correspond to one of the basic classes or subclasses (which have .ClassAttrs)
+//        //Other Progression still exists in exisitngClasses though and are later correctly printed but cannot be edited in the program
+//        //For now this seems better I think, but later it would be good to add Races, NPC_something classes, etc.
+//        QString* className = &c.second.ClassAttrs["Name"]["value"];
+////        if (!className->isEmpty()) {
+////            ui->listClasses->addItem(*className);
+////        }
 
-        ui->listClasses->addItem(c.ClassAttrs["Name"]["value"]);
-    }
+//        ui->listClasses->addItem(*className);
 
-    ui->textEdit->setText(text);
+//        //or... this adds all items from existingClasses (it includes Progressions that do not have 'base class' added - they have no .ClassAttrs
+//        //this happens e.g. for races Progressions, as only Classes are added with .ClassAttrs (also for many NPC_something Progressions)
+//        //ui->listClasses->addItem(c.first);
+
+////        text.append("-------Class Name: " + c.ClassAttrs["Name"]["value"] + "--------\n");
+////        for (QString attrID : c.ClassAttrs.keys()){
+////            text.append(attrID + " :: ");
+////            for (QString string : c.ClassAttrs[attrID].keys()){
+////                text.append(string + "=" + c.ClassAttrs[attrID][string] + " ");
+////            }
+////            text.append("\n");
+////        }
+//    }
+//    ui->textEdit->setText(text);
 }
 
 void MainWindow::on_AddProgressionFile_Btn_clicked()
@@ -164,37 +196,107 @@ void MainWindow::on_AddProgressionFile_Btn_clicked()
         QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
     }
 
-    ReadFromFile_Attributes(&file);
+    //ReadFromFile_Attributes(&file);
+    HistoryFile::AddFileToHistoryList(progressionsFileName, &HistoryFile::classProgressionsList, this);
+}
+
+void MainWindow::on_ImportAllFiles_Btn_clicked(){
+    existingClasses.clear();
+    for(int i = 0; i < ui->listWidget_ClassDescFiles->count(); ++i) {
+        QString filepath = ui->listWidget_ClassDescFiles->item(i)->text();
+        QFile file(filepath);
+        if (!file.open(QIODevice::ReadOnly | QFile::Text)){
+            QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
+        }
+        ReadFromFile_Attributes(&file);
+    }
+    QString text;
+    ui->listClasses->clear();
+    for(auto c : existingClasses.asKeyValueRange()) {
+        QString* className = &c.second.ClassAttrs["Name"]["value"];
+        //        if (!className->isEmpty()) {
+        //            ui->listClasses->addItem(*className);
+        //        }
+        ui->listClasses->addItem(*className);
+    }
+
+    for(int i = 0; i < ui->listWidget_ClassProgFiles->count(); ++i) {
+        QString filepath = ui->listWidget_ClassProgFiles->item(i)->text();
+        QFile file(filepath);
+        if (!file.open(QIODevice::ReadOnly | QFile::Text)){
+            QMessageBox::warning(this, "Warning", "Cannot open file: " + file.errorString());
+        }
+        ReadFromFile_Attributes(&file);
+    }
+
+}
+
+
+void MainWindow::on_ResetHistory_Btn_clicked(){
+    HistoryFile::classDescriptionsList.clear();
+    HistoryFile::classProgressionsList.clear();
+    ui->listWidget_ClassDescFiles->clear();
+    ui->listWidget_ClassProgFiles->clear();
 }
 
 void MainWindow::on_listClasses_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-    currentClass = &existingClasses[current->text()];
-    ui->label_CurrentClass->setText(current->text());
+    if (current == nullptr) {
+        currentClass = nullptr;
+        ui->label_CurrentClass->setText("");
+    }
+    else {
+        currentClass = &existingClasses[current->text()];
+        ui->label_CurrentClass->setText(current->text());
+        ui->listLevels->clear();
+        QStringList tempList;
+        for (auto prog : currentClass->ClassProgressions.asKeyValueRange()){
+            tempList.append(prog.first);
+
+        }
+        QCollator collator;
+        collator.setNumericMode(true);
+        std::sort(tempList.begin(), tempList.end(), collator);
+//        std::sort(list.begin(), list.end(), [](const QString &lhs, const QString &rhs)
+//                  {
+//                      int num_lhs = lhs[0].digitValue();
+//                      int num_rhs = rhs.split(' ').last().toInt();
+//                      return num_lhs < num_rhs;
+//                  });
+        for (auto item : tempList){
+            ui->listLevels->addItem(item);
+        }
+    }
+    QString level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text() : "0";
 
     PrintValuesToWidgetsInFrame(ui->frame_ClassDescription, this);
-    int level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text().toInt() : 1;
     PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this, level);
 }
 
 void MainWindow::on_listLevels_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-    ui->label_CurrentLevel->setText(current->text());
-    PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this,  current->text().toInt());
-
-    if (currentClass == nullptr) { return; }
-    QString text;
-    text.append("Level: " + current->text() + "\n");
-    QMap<QString, QMap<QString, QString>> *currentProgAttribs = &currentClass->ClassProgressions[current->text().toInt()].ProgAttrs;
-    for (auto attrKey : (*currentProgAttribs).keys()){
-        if (attrKey.isEmpty()) { continue; }
-        text.append(attrKey + " : ");
-        for (auto linePart : (*currentProgAttribs)[attrKey].keys()){
-            text.append(linePart + "=" + (*currentProgAttribs)[attrKey][linePart] + " ");
-        }
-        text.append("\n");
+    if (current == nullptr){
+        ui->label_CurrentLevel->setText("");
+        PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this,  "0");
     }
-    ui->textEdit->setText(text);
+    else {
+        ui->label_CurrentLevel->setText(current->text());
+        PrintValuesToWidgetsInFrame(ui->frame_LevelProgression, this,  current->text());
+    }
+
+//    if (currentClass == nullptr) { return; }
+//    QString text;
+//    text.append("Level: " + current->text() + "\n");
+//    QMap<QString, QMap<QString, QString>> *currentProgAttribs = &currentClass->ClassProgressions[current->text().toInt()].ProgAttrs;
+//    for (auto attrKey : (*currentProgAttribs).keys()){
+//        if (attrKey.isEmpty()) { continue; }
+//        text.append(attrKey + " : ");
+//        for (auto linePart : (*currentProgAttribs)[attrKey].keys()){
+//            text.append(linePart + "=" + (*currentProgAttribs)[attrKey][linePart] + " ");
+//        }
+//        text.append("\n");
+//    }
+//    ui->textEdit->setText(text);
 }
 
 void MainWindow::on_SaveAllToFiles_Btn_clicked()
@@ -209,23 +311,34 @@ void MainWindow::on_SaveAllToFiles_Btn_clicked()
     //PrintToFile_Attributes(&file, "Progressions", 4, 0, 9, 314);
 }
 
-
-void MainWindow::on_ClassAttrs_AllLineEdits_textEdited(const QString &arg1)
+//OPTION 1 - textChanged and stateChanged
+void MainWindow::on_ClassAttrs_AllLineEdits_textChanged(const QString &arg1)
 {
+    if (currentClass == nullptr) { return; }
     QString attrName = QObject::sender()->objectName().replace("lineEdit_", "");
     currentClass->ClassAttrs[attrName]["value"] = arg1;
 }
 
-void MainWindow::on_ProgAttrs_AllLineEdits_textEdited(const QString &arg1)
+void MainWindow::on_ProgAttrs_AllLineEdits_textChanged(const QString &arg1)
 {
+    if (currentClass == nullptr) { return; }
     QString attrName = QObject::sender()->objectName().replace("lineEdit_", "");
-    int level = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
-    if (level <= 0) { return; }
-    currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = arg1;
+    QString level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text() : "0";
+    if (level == "0") { return; }
+    if (attrName == "Level"){
+        if (arg1.isEmpty()) { return; }
+        currentClass->ClassProgressions[arg1] = currentClass->ClassProgressions[level];
+        currentClass->ClassProgressions[arg1].ProgAttrs[attrName]["value"] = arg1;
+    }
+    else {
+        currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = arg1;
+    }
+
 }
 
 void MainWindow::on_ClassAttrs_AllCheckBoxes_stateChanged(int arg1)
 {
+    if (currentClass == nullptr) { return; }
     QString value;
     if      (arg1 == 0) { value = "false"; }
     else if (arg1 == 2) { value = "true"; }
@@ -235,84 +348,90 @@ void MainWindow::on_ClassAttrs_AllCheckBoxes_stateChanged(int arg1)
 
 void MainWindow::on_ProgAttrs_AllCheckBoxes_stateChanged(int arg1)
 {
+    if (currentClass == nullptr) { return; }
     QString value;
     if      (arg1 == 0) { value = "false"; }
     else if (arg1 == 2) { value = "true"; }
     QString attrName = QObject::sender()->objectName().replace("chbx_", "");
-    int level = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
-    if (level <= 0) { return; }
-    currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
-}
+    QString level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text() : "0";
+    if (level == "0") { return; }
+    if (attrName == "IsMulticlass"){
+        if (value == "true"){
+            //assign current level prog (so the one that is currently displaying) to the [level + "m"] index (creating new if it does not exist)
+            currentClass->ClassProgressions[level + "m"] = currentClass->ClassProgressions[level];
+            currentClass->ClassProgressions[level + "m"].ProgAttrs[attrName]["value"] = value;
+        }
+        else {
+            currentClass->ClassProgressions[level] = currentClass->ClassProgressions[level + "m"];
+            currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
+        }
 
-void MainWindow::on_tableWidget_Boosts_cellClicked(int row, int column)
-{
-    //This reads (or sets) the text of the QTableWidgetItem - it needs to be added first if it doesn't exist
-    //qobject_cast<QTableWidget*>(QObject::sender())->item(row, column)->setText("Dupa 2");
-
-//    //This read data (text) from the cell
-//    QString cellText = qobject_cast<QTableWidget*>(QObject::sender())->model()->index(row,column).data().toString();
-
-    //cellText += "_New";
-
-    //This adds an item (text) to the cell
-//    QAbstractItemModel* model = qobject_cast<QTableWidget*>(QObject::sender())->model();
-//    QModelIndex idx = model->index(row, column);
-    //model->setData(idx, QString(cellText)); //or QStringLiteral("some text"); or simply "some text";
-
-
-    //This changes Widget in the cell - but if widget is in the cell, then cellClicked event is not called
-//    QWidget* widget = qobject_cast<QTableWidget*>(QObject::sender())->cellWidget(row + 1, column);
-//    if (QPushButton* btn = qobject_cast<QPushButton*>(widget)){
-//        btn->setText("Button text changed");
-//    }
-}
-
-
-void DisplayAutoFillBoostsForLineEdit(QLineEdit* lineEdit, QLineEdit* lineEdit2, QMainWindow* mw, QTextEdit* te){
-    QFrame* parentWidget = (QFrame*)lineEdit->parentWidget();
-    QString attrValue = lineEdit->text();
-    QPoint posToShowAutoFillWindow = QPoint(lineEdit->pos().x(), lineEdit->pos().y() + lineEdit->height());
-    int cursorPosInLineEdit = lineEdit->cursorPosition();
-    lineEdit2->setText(QString::number(cursorPosInLineEdit));
-    QListWidget* list = new QListWidget();
-    for (QString arg : List_ActionResource){
-        list->addItem(arg);
     }
-    list->setParent(parentWidget);
-    list->show();
-    list->move(posToShowAutoFillWindow);
-}
-
-void DisplayAutoFillBoostsForTableItemChanged(QTableWidgetItem* item, QTableWidget* parentTable, QLineEdit* lineEdit2){
-    QMessageBox Msgbox;
-    Msgbox.setText("Dupa");
-    Msgbox.exec();
-
-    if (parentTable->currentItem() != item) { return; }
-    QWidget* parentFrame = parentTable->parentWidget();
-    QString attrValue = item->text();
-    int rowHeight = parentTable->rowHeight(item->row());
-    QPoint itemBottomPos = QPoint(parentTable->pos().x(), parentTable->pos().y() + rowHeight * parentTable->rowCount());
-
-    //int cursorPosInLineEdit = ((QLineEdit*)item)->cursorPosition();
-    //lineEdit2->setText(QString::number(cursorPosInLineEdit));
-    QListWidget* list = new QListWidget();
-    for (QString arg : List_ActionResource){
-        list->addItem(arg);
+    else{
+        currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
     }
-    list->setParent(parentFrame);
-    list->show();
-    list->move(itemBottomPos);
 }
 
-void MainWindow::on_tableWidget_Boosts_itemChanged(QTableWidgetItem *item)
+//OPTION 2 - textEdited and clicked
+void MainWindow::on_ClassAttrs_AllLineEdits_textEdited(const QString &arg1)
 {
-    int level = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
-    if (level <= 0) { return; }
+    if (currentClass == nullptr) { return; }
+    QString attrName = QObject::sender()->objectName().replace("lineEdit_", "");
+    currentClass->ClassAttrs[attrName]["value"] = arg1;
+}
 
-    DisplayAutoFillBoostsForTableItemChanged(item, item->tableWidget(), ui->lineEdit_PassivesAdded);
+void MainWindow::on_ProgAttrs_AllLineEdits_textEdited(const QString &arg1)
+{
+    if (currentClass == nullptr) { return; }
+    QString attrName = QObject::sender()->objectName().replace("lineEdit_", "");
+    QString level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text() : "0";
+    if (level == "0") { return; }
+    if (attrName == "Level"){
+        if (arg1.isEmpty()) { return; }
+        currentClass->ClassProgressions[arg1] = currentClass->ClassProgressions[level];
+        currentClass->ClassProgressions[arg1].ProgAttrs[attrName]["value"] = arg1;
+    }
+    else {
+        currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = arg1;
+    }
+}
 
-    UpdateWidgetTextFromTableWidget(ui->lineEdit_Boosts, ui->tableWidget_Boosts, level);
+void MainWindow::on_ClassAttrs_AllCheckBoxes_clicked()
+{
+    if (currentClass == nullptr) { return; }
+    QCheckBox* checkBox = qobject_cast<QCheckBox*>(QObject::sender());
+    QString value;
+    if      (checkBox->checkState() == Qt::CheckState::Unchecked) { value = "false"; }
+    else if (checkBox->checkState() == Qt::CheckState::Checked) { value = "true"; }
+    QString attrName = QObject::sender()->objectName().replace("chbx_", "");
+    currentClass->ClassAttrs[attrName]["value"] = value;
+}
+
+void MainWindow::on_ProgAttrs_AllCheckBoxes_clicked()
+{
+    if (currentClass == nullptr) { return; }
+    QCheckBox* checkBox = qobject_cast<QCheckBox*>(QObject::sender());
+    QString value;
+    if      (checkBox->checkState() == Qt::CheckState::Unchecked) { value = "false"; }
+    else if (checkBox->checkState() == Qt::CheckState::Checked) { value = "true"; }
+    QString attrName = QObject::sender()->objectName().replace("chbx_", "");
+    QString level = ui->listLevels->currentItem() != nullptr ? ui->listLevels->currentItem()->text() : "0";
+    if (level == "0") { return; }
+    if (attrName == "IsMulticlass"){
+        if (value == "true"){
+            //assign current level prog (so the one that is currently displaying) to the [level + "m"] index (creating new if it does not exist)
+            currentClass->ClassProgressions[level + "m"] = currentClass->ClassProgressions[level];
+            currentClass->ClassProgressions[level + "m"].ProgAttrs[attrName]["value"] = value;
+        }
+        else {
+            currentClass->ClassProgressions[level] = currentClass->ClassProgressions[level + "m"];
+            currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
+        }
+
+    }
+    else{
+        currentClass->ClassProgressions[level].ProgAttrs[attrName]["value"] = value;
+    }
 }
 
 
@@ -320,9 +439,7 @@ void MainWindow::on_btn_Boosts_AddRow_clicked()
 {
     int rowIndex = ui->tableWidget_Boosts->rowCount();
     ui->tableWidget_Boosts->insertRow(rowIndex);
-    //ui->tableWidget_Boosts->setCellWidget(rowIndex, 0, new QLineEdit);
     new LineEditInTableWidget(ui->tableWidget_Boosts, rowIndex, 0, "", this);
-    //CreateLineEditAsTableItem(ui->tableWidget_Boosts, rowIndex, 0, "");
 }
 
 void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
@@ -330,11 +447,13 @@ void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
     if (tw == ui->tableWidget_Boosts){
         widget = ui->lineEdit_Boosts;
     }
-    ui->textEdit->setText(QString::number(rowIndex));
     tw->removeRow(rowIndex);
-    int progLevel = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
-    if (progLevel <= 0) { return; }
-    UpdateWidgetTextFromTableWidget(widget, tw, progLevel);
+    UpdateWidgetTextFromTableWidget(widget, tw);
+
+    //ui->textEdit->setText(QString::number(rowIndex));
+    //int progLevel = ui->label_CurrentLevel->text() != nullptr ? ui->label_CurrentLevel->text().toInt() : 0;
+    //if (progLevel <= 0) { return; }
+    //UpdateWidgetTextFromTableWidget(widget, tw, progLevel);
 }
 
 //How to pass a parameter to a function with connect:
@@ -344,18 +463,23 @@ void MainWindow::TableDeleteRow(QTableWidget* tw, int rowIndex){
 //https://forum.qt.io/topic/111691/create-context-menu-when-right-click-on-header-of-qtreewidget
 //https://www.qtcentre.org/threads/24556-Adding-actions-to-a-context-menu
 //https://stackoverflow.com/questions/2711267/context-menu-creation-with-qt-designerqt-creator-ide
-void MainWindow::on_tableWidget_Boosts_customContextMenuRequested(const QPoint &pos)
+
+
+void MainWindow::on_listWidget_ClassDescFiles_customContextMenuRequested(const QPoint &pos)
 {
-    QTableWidget* tw = qobject_cast<QTableWidget*>(QObject::sender());
-    //new TableContextMenu(tw, pos, this);
-}
+    QListWidget* lw = qobject_cast<QListWidget*>(QObject::sender());
+    int rowIndex = lw->indexAt(pos).row();
 
+    QMenu* menu = new QMenu();
+    QAction *action_DeleteRow = menu->addAction("Delete Row");
+    connect(action_DeleteRow, &QAction::triggered, menu, [lw, menu, rowIndex](){
+        QString itemName = lw->item(rowIndex)->text();
+        lw->model()->removeRow(rowIndex);
+        int indexHistory = HistoryFile::classDescriptionsList.indexOf(itemName);
+        HistoryFile::classDescriptionsList.removeAt(indexHistory);
+        delete menu;
+    });
 
-
-
-void MainWindow::on_lineEdit_Boosts_cursorPositionChanged(int arg1, int arg2)
-{
-    //DisplayAutoFillBoostsForLineEdit(ui->lineEdit_Boosts, ui->lineEdit_PassivesAdded, this, ui->textEdit);
-    //ui->lineEdit_PassivesAdded->setText(QString::number(arg2));
+    menu->popup(lw->viewport()->mapToGlobal(pos));
 }
 

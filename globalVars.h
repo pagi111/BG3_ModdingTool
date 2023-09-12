@@ -37,7 +37,8 @@ public:
 class CharacterClass{
 public:
     QMap<QString, QMap<QString, QString>> ClassAttrs;
-    QMap<int, Progression> ClassProgressions;
+    //key was int previously; changed to QString because there are multiclass progressions which will have letter 'm' after level number (e.g. 1m)
+    QMap<QString, Progression> ClassProgressions;
     QMap<QString, QList<Child>> Children;
 };
 
@@ -47,6 +48,8 @@ extern QMap<QString, CharacterClass> existingClasses;
 extern CharacterClass* currentClass;
 extern QString classDescriptionsFileName;
 extern QString progressionsFileName;
+extern QString historyFileName;
+extern QString baseDirectoryPath;
 
 extern QList<QString> List_Interrupt;
 extern QList<QString> List_ActionResource;
@@ -58,7 +61,7 @@ extern QMap<QString, QList<QString>> boostsHints;
 
 extern QString boostsTypes2[];
 
-extern QListWidget* listWidget_AutoFill;
+//extern QListWidget* listWidget_AutoFill;
 
 
 

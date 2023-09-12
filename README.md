@@ -26,12 +26,18 @@ v.0.5:
 	- not all lists are correct
 	- does not yet support taking data from multiple lists at once to display as hints (e.g. Proficiency can take as an argument either a skill or weapon or armor proficiency)
 
+v.0.6:
+- added multiple lists support to the autofill system
+- changed the tooltips in the context menu (now only shows examples of usage and each action has its own tooltip)
+- added history file with what files were previously used
+- made it possible to import data from multiple ClassDescriptions.lsx and Progressions.lsx files at once
+- added default game files to import data from 
+- added support for displaying and modifying multiclass progressions
+- made changing progression level work correctly
+
+
 
 TO DO:
-- add multiple lists support to the autofill system
-- add default files to take data from (add them to the program's folder)
-- add support for taking data from multiple Progressions.lsx and ClassDescriptions.lsx at once
 - add autofill support for other Progressions Attributes apart from boosts (e.g. selectors)
 - differentiate between classes and subclasses (especially in the GUI as mechanics is almost the same)
-- differentiate between a regular class progression and multiclass progressions
 - change the GUI 

@@ -6,8 +6,6 @@
 
 
 
-
-
 void ReadFromFile_ValueLists(QFile *file)
 {
     QTextStream stream(file);
@@ -47,52 +45,54 @@ QMap<QString, QString> FindAttrsInLine(QString* id, QString* line){
     QMap<QString, QString> map;
 
     for (int i = 0; i < lineContents.count() - 1; i++){ //.count()-1 because last one is an empty string
-        if (i % 2 == 0) {
+        if (i % 2 == 0) {                               //if i is even... (means it's the name of the attributes' parts - e.g. id, type, etc.)
             lineContents[i].replace("=", "").replace(" ", "");
 
             if (lineContents[i] == "id"){
                 *id = lineContents[i + 1];
             }
             else {
-                map[lineContents[i]] = lineContents[i+1];
+                map[lineContents[i]] = lineContents[i+1];   //to the type of the attribute's part assign its value
             }
         }
     }
     return map;
 }
 
-//void CreateLineEditAsTableItem(QTableWidget* tw, int row, int col, QString text, MainWindow* mw){
-//    QLineEdit* le = new QLineEdit(text);
-//    le->setFrame(false);
-//    QPoint pos = QCursor::pos();
 
-//    auto ShowContextMenu = [tw, pos, mw]()
-//    {
-//        new TableContextMenu(tw, pos, mw);
-//    };
-
-//    connect(le, &QLineEdit::textChanged, []() {
-//            ;
-//        });
-
-//    tw->setCellWidget(row, col, le);
+//Old - use it if in mainwindow.cpp you connect All_LineEdit_TextEdited functions to QLineEdit::textEdited slots
+//if ::textChanged - use new function below
+//void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel){
+//    if (widget == nullptr) { return; }
+//    QString attrName = widget->objectName().split("_").last();
+//    QString string;
+//    for (int i = 0; i < tableWidget->rowCount(); i++){
+//        int rowCount = tableWidget->rowCount();
+//        //QString rowString = tableWidget->model()->index(i,0).data().toString();
+//        if (LineEditInTableWidget* lineEdit = qobject_cast<LineEditInTableWidget*>(tableWidget->cellWidget(i, 0))){
+//            QString rowString = lineEdit->text();
+//            string = i ==  rowCount - 1 ? string + rowString :
+//                         string + rowString + ";" ;
+//        }
+//    }
+//    ((QLineEdit*)widget)->setText(string);
+//    currentClass->ClassProgressions[progLevel].ProgAttrs[attrName]["value"] = string;
 //}
 
-void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget, int progLevel){
+//New - use it if in mainwindow.cpp you connect All_LineEdit_TextChanged functions to QLineEdit::textChanged slots
+void UpdateWidgetTextFromTableWidget(QWidget* widget, QTableWidget* tableWidget){
     if (widget == nullptr) { return; }
     QString attrName = widget->objectName().split("_").last();
     QString string;
     for (int i = 0; i < tableWidget->rowCount(); i++){
         int rowCount = tableWidget->rowCount();
-        //QString rowString = tableWidget->model()->index(i,0).data().toString();
-        if (QLineEdit* lineEdit = qobject_cast<QLineEdit*>(tableWidget->cellWidget(i, 0))){
+        if (LineEditInTableWidget* lineEdit = qobject_cast<LineEditInTableWidget*>(tableWidget->cellWidget(i, 0))){
             QString rowString = lineEdit->text();
             string = i ==  rowCount - 1 ? string + rowString :
                          string + rowString + ";" ;
         }
     }
     ((QLineEdit*)widget)->setText(string);
-    currentClass->ClassProgressions[progLevel].ProgAttrs[attrName]["value"] = string;
 }
 
 void PrintValuesToTableWidget(QTableWidget* tw, QString attrValue, MainWindow* mw){
@@ -103,31 +103,34 @@ void PrintValuesToTableWidget(QTableWidget* tw, QString attrValue, MainWindow* m
 
     for (auto boost : boostsList){
         tw->insertRow(tw->rowCount());
-        QAbstractItemModel* model = tw->model();
-        QModelIndex idx = model->index(tw->rowCount() - 1, 0);
-
-//        QLineEdit* le = new QLineEdit(boost);
-//        le->setFrame(false);
-//        tw->setCellWidget(idx.row(), idx.column(), le);
-        new LineEditInTableWidget(tw, idx.row(), idx.column(), boost, mw);
-        //CreateLineEditAsTableItem(tw, idx.row(), idx.column(), boost, mw);
-
-        //model->setData(idx, boost);
+        new LineEditInTableWidget(tw, tw->rowCount() - 1, 0, boost, mw);
     }
 }
 
-void PrintValuesToWidgetsInFrame(QFrame* frame, MainWindow* mw, int level)
+void PrintValuesToWidgetsInFrame(QFrame* frame, MainWindow* mw, QString level)
 {
+    auto ClearWidgetsInFrame = [frame, mw] (){
+        for (auto widget : frame->children()) {
+            if (QLineEdit* lineEdit = qobject_cast<QLineEdit*>(widget)) {
+                lineEdit->setText("");
+            }
+            else if (QCheckBox* chbx = qobject_cast<QCheckBox*>(widget)) {
+                chbx->setCheckState(Qt::Unchecked);
+            }
+        }
+    };
+
     QMap<QString, QMap<QString, QString>>* attributes;
-    if (currentClass == nullptr) { return; }
+    if (currentClass == nullptr) { ClearWidgetsInFrame(); return; }
     if (frame->objectName() == "frame_ClassDescription") {
         attributes = &currentClass->ClassAttrs;
     }
     else if (frame->objectName() == "frame_LevelProgression") {
-        attributes = &currentClass->ClassProgressions[level].ProgAttrs;
+        if (level == "0") { ClearWidgetsInFrame; return; }
+        else { attributes = &currentClass->ClassProgressions[level].ProgAttrs; }
     }
     else { return; }
-    if (attributes == nullptr) { return; }
+    if (attributes == nullptr) { ClearWidgetsInFrame(); return; }
 
     for (auto widget : frame->children()) {
         //https://forum.qt.io/topic/117141/check-if-widget-is-pushbutton/6
@@ -198,7 +201,8 @@ void ReadFromFile_Attributes(QFile *file)
             if (currentRegion == "ClassDescription"){
                 if (lineChildrenScopeLevel == 0) {
                     QString className = currentClassInFile.ClassAttrs["Name"]["value"];
-                    existingClasses[className] = currentClassInFile;
+                    //existingClasses[className] = currentClassInFile;
+                    existingClasses[className].ClassAttrs = currentClassInFile.ClassAttrs;
                 }
                 else {
                     currentClassInFile.Children[currentNode].append(currentChild);
@@ -207,7 +211,10 @@ void ReadFromFile_Attributes(QFile *file)
             else if (currentRegion == "Progression"){
                 if (lineChildrenScopeLevel == 0) {
                     QString className = currentProgressionInFile.ProgAttrs["Name"]["value"];
-                    int progressionLevel = currentProgressionInFile.ProgAttrs["Level"]["value"].toInt();
+                    QString progressionLevel = currentProgressionInFile.ProgAttrs["Level"]["value"];
+                    if (currentProgressionInFile.ProgAttrs["IsMulticlass"]["value"] == "true"){
+                        progressionLevel.append("m");
+                    }
                     existingClasses[className].ClassProgressions[progressionLevel] = currentProgressionInFile;
                 }
                 else {
